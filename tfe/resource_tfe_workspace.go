@@ -85,6 +85,18 @@ func resourceTFEWorkspace() *schema.Resource {
 				Default:  true,
 			},
 
+			"global_remote_state": {
+				Type:     schema.TypeBool,
+				Optional: true,
+				Default:  true,
+			},
+
+			"remote_state_consumer_ids": {
+				Type:     schema.TypeSet,
+				Optional: true,
+				Elem:     &schema.Schema{Type: schema.TypeString},
+			},
+
 			"operations": {
 				Type:          schema.TypeBool,
 				Optional:      true,
@@ -245,6 +257,17 @@ func resourceTFEWorkspaceCreate(d *schema.ResourceData, meta interface{}) error 
 		}
 	}
 
+	if remoteStateConsumerIDs, ok := d.GetOk("remote_state_consumer_ids"); ok {
+		options := tfe.WorkspaceAddRemoteStateConsumersOptions{}
+		for _, remoteStateConsumerID := range remoteStateConsumerIDs.(*schema.Set).List() {
+			options.Workspaces = append(options.Workspaces, &tfe.Workspace{ID: remoteStateConsumerID.(string)})
+		}
+		err = tfeClient.Workspaces.AddRemoteStateConsumers(ctx, workspace.ID, options)
+		if err != nil {
+			return fmt.Errorf("Error adding remote state consumers to workspace %s: %v", name, err)
+		}
+	}
+
 	return resourceTFEWorkspaceRead(d, meta)
 }
 
@@ -268,6 +291,7 @@ func resourceTFEWorkspaceRead(d *schema.ResourceData, meta interface{}) error {
 	d.Set("allow_destroy_plan", workspace.AllowDestroyPlan)
 	d.Set("auto_apply", workspace.AutoApply)
 	d.Set("file_triggers_enabled", workspace.FileTriggersEnabled)
+	d.Set("global_remote_state", workspace.GlobalRemoteState)
 	d.Set("operations", workspace.Operations)
 	d.Set("execution_mode", workspace.ExecutionMode)
 	d.Set("queue_all_runs", workspace.QueueAllRuns)
@@ -304,18 +328,27 @@ func resourceTFEWorkspaceRead(d *schema.ResourceData, meta interface{}) error {
 
 	d.Set("vcs_repo", vcsRepo)
 
+	var remoteStateConsumerIDs []interface{}
+	// if !workspace.GlobalRemoteState {
+	for _, remoteStateConsumer := range workspace.RemoteStateConsumers {
+		remoteStateConsumerIDs = append(remoteStateConsumerIDs, remoteStateConsumer.ID)
+	}
+	// }
+	d.Set("remote_state_consumer_ids", remoteStateConsumerIDs)
+
 	return nil
 }
 
 func resourceTFEWorkspaceUpdate(d *schema.ResourceData, meta interface{}) error {
 	tfeClient := meta.(*tfe.Client)
 	id := d.Id()
+	// globalRemoteState := d.Get("global_remote_state").(bool)
 
 	if d.HasChange("name") || d.HasChange("auto_apply") || d.HasChange("queue_all_runs") ||
 		d.HasChange("terraform_version") || d.HasChange("working_directory") || d.HasChange("vcs_repo") ||
 		d.HasChange("file_triggers_enabled") || d.HasChange("trigger_prefixes") ||
 		d.HasChange("allow_destroy_plan") || d.HasChange("speculative_enabled") ||
-		d.HasChange("operations") || d.HasChange("execution_mode") || d.HasChange("agent_pool_id") {
+		d.HasChange("operations") || d.HasChange("execution_mode") || d.HasChange("agent_pool_id") || d.HasChange("global_remote_state") {
 
 		// Create a new options struct.
 		options := tfe.WorkspaceUpdateOptions{
@@ -323,6 +356,7 @@ func resourceTFEWorkspaceUpdate(d *schema.ResourceData, meta interface{}) error 
 			AllowDestroyPlan:    tfe.Bool(d.Get("allow_destroy_plan").(bool)),
 			AutoApply:           tfe.Bool(d.Get("auto_apply").(bool)),
 			FileTriggersEnabled: tfe.Bool(d.Get("file_triggers_enabled").(bool)),
+			GlobalRemoteState:   tfe.Bool(d.Get("global_remote_state").(bool)),
 			QueueAllRuns:        tfe.Bool(d.Get("queue_all_runs").(bool)),
 			SpeculativeEnabled:  tfe.Bool(d.Get("speculative_enabled").(bool)),
 			WorkingDirectory:    tfe.String(d.Get("working_directory").(string)),
@@ -415,6 +449,46 @@ func resourceTFEWorkspaceUpdate(d *schema.ResourceData, meta interface{}) error 
 			_, err := tfeClient.Workspaces.UnassignSSHKey(ctx, id)
 			if err != nil {
 				return fmt.Errorf("Error unassigning SSH key from workspace %s: %v", id, err)
+			}
+		}
+	}
+
+	// TODO if not global state
+	if d.HasChange("remote_state_consumer_ids") {
+		oldWorkspaceIDValues, newWorkspaceIDValues := d.GetChange("remote_state_consumer_ids")
+		newWorkspaceIDsSet := newWorkspaceIDValues.(*schema.Set)
+		oldWorkspaceIDsSet := oldWorkspaceIDValues.(*schema.Set)
+
+		newWorkspaceIDs := newWorkspaceIDsSet.Difference(oldWorkspaceIDsSet)
+		oldWorkspaceIDs := oldWorkspaceIDsSet.Difference(newWorkspaceIDsSet)
+
+		// First add the new consumerss
+		if newWorkspaceIDs.Len() > 0 {
+			options := tfe.WorkspaceAddRemoteStateConsumersOptions{}
+
+			for _, workspaceID := range newWorkspaceIDs.List() {
+				options.Workspaces = append(options.Workspaces, &tfe.Workspace{ID: workspaceID.(string)})
+			}
+
+			log.Printf("[DEBUG] Adding remote state consumers to workspace: %s", d.Id())
+			err := tfeClient.Workspaces.AddRemoteStateConsumers(ctx, d.Id(), options)
+			if err != nil {
+				return fmt.Errorf("Error adding remote state consumers to workspace %s: %v", d.Id(), err)
+			}
+		}
+
+		// Then remove all the old consumers.
+		if oldWorkspaceIDs.Len() > 0 {
+			options := tfe.WorkspaceRemoveRemoteStateConsumersOptions{}
+
+			for _, workspaceID := range oldWorkspaceIDs.List() {
+				options.Workspaces = append(options.Workspaces, &tfe.Workspace{ID: workspaceID.(string)})
+			}
+
+			log.Printf("[DEBUG] Removing remote state consumers from workspace: %s", d.Id())
+			err := tfeClient.Workspaces.RemoveRemoteStateConsumers(ctx, d.Id(), options)
+			if err != nil {
+				return fmt.Errorf("Error removing remote state consumers from workspace %s: %v", d.Id(), err)
 			}
 		}
 	}

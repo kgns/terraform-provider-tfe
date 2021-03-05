@@ -39,6 +39,11 @@ func dataSourceTFEWorkspace() *schema.Resource {
 				Computed: true,
 			},
 
+			"global_remote_state": {
+				Type:     schema.TypeBool,
+				Computed: true,
+			},
+
 			"operations": {
 				Type:     schema.TypeBool,
 				Computed: true,
@@ -127,6 +132,7 @@ func dataSourceTFEWorkspaceRead(d *schema.ResourceData, meta interface{}) error 
 	d.Set("allow_destroy_plan", workspace.AllowDestroyPlan)
 	d.Set("auto_apply", workspace.AutoApply)
 	d.Set("file_triggers_enabled", workspace.FileTriggersEnabled)
+	d.Set("global_remote_state", workspace.GlobalRemoteState)
 	d.Set("operations", workspace.Operations)
 	d.Set("queue_all_runs", workspace.QueueAllRuns)
 	d.Set("speculative_enabled", workspace.SpeculativeEnabled)
