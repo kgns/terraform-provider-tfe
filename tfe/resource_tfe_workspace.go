@@ -6,6 +6,7 @@ import (
 	"log"
 	"regexp"
 
+	hclog "github.com/hashicorp/go-hclog"
 	tfe "github.com/hashicorp/go-tfe"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
@@ -14,6 +15,11 @@ import (
 var workspaceIdRegexp = regexp.MustCompile("^ws-[a-zA-Z0-9]{16}$")
 
 func resourceTFEWorkspace() *schema.Resource {
+	log.Println("[DEBUG] OMAR")
+	log.Println("[Info] OMAR")
+	log.Println("OMAR in resource_tfe_workspace")
+	hclog.Default().Info("[INFO] OMAR hello world")
+	hclog.Default().Info("[DEBUG] OMAR hello world")
 	return &schema.Resource{
 		Create: resourceTFEWorkspaceCreate,
 		Read:   resourceTFEWorkspaceRead,
@@ -329,11 +335,12 @@ func resourceTFEWorkspaceRead(d *schema.ResourceData, meta interface{}) error {
 	d.Set("vcs_repo", vcsRepo)
 
 	var remoteStateConsumerIDs []interface{}
-	// if !workspace.GlobalRemoteState {
-	for _, remoteStateConsumer := range workspace.RemoteStateConsumers {
-		remoteStateConsumerIDs = append(remoteStateConsumerIDs, remoteStateConsumer.ID)
+	if workspace.GlobalRemoteState {
+		fmt.Println("HAS GLOBAL REMOTE ENABLED")
+		//for _, remoteStateConsumer := range workspace.RemoteStateConsumers {
+		//	remoteStateConsumerIDs = append(remoteStateConsumerIDs, remoteStateConsumer.ID)
+		//}
 	}
-	// }
 	d.Set("remote_state_consumer_ids", remoteStateConsumerIDs)
 
 	return nil

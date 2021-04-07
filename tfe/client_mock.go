@@ -111,3 +111,7 @@ func (m *mockWorkspaces) AddRemoteStateConsumers(ctx context.Context, workspaceI
 func (m *mockWorkspaces) RemoveRemoteStateConsumers(ctx context.Context, workspaceID string, options tfe.WorkspaceRemoveRemoteStateConsumersOptions) error {
 	panic("not implemented")
 }
+
+func (m *mockWorkspaces) ReadRemoteStateConsumers(ctx context.Context, workspaceID string) (*tfe.WorkspaceList, error) {
+	panic("not implemented")
+}
