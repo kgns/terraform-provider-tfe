@@ -1360,7 +1360,7 @@ resource "tfe_organization" "foobar" {
 resource "tfe_workspace" "foobar_remote" {
   name               = "workspace-test-2"
   organization       = tfe_organization.foobar.id
-	global_remote_state = false
+  global_remote_state = false
 }
 
 resource "tfe_workspace" "foobar" {
@@ -1368,7 +1368,7 @@ resource "tfe_workspace" "foobar" {
   organization       = tfe_organization.foobar.id
   allow_destroy_plan = false
   auto_apply         = true
-	global_remote_state = false
+  global_remote_state = false
   remote_state_consumer_ids = [tfe_workspace.foobar_remote.id]
 }`, rInt)
 }
