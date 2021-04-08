@@ -12,7 +12,6 @@ import (
 	"sort"
 	"strings"
 
-	hclog "github.com/hashicorp/go-hclog"
 	tfe "github.com/hashicorp/go-tfe"
 	version "github.com/hashicorp/go-version"
 	"github.com/hashicorp/hcl"
@@ -46,14 +45,6 @@ var ctx = context.Background()
 
 // Provider returns a schema.Provider
 func Provider() *schema.Provider {
-	log.Println("OMAR HERE IN tfe/provider.go")
-	log.Println("[DEBUG] OMAR")
-	log.Println("[Info] OMAR")
-	log.Println("OMAR in resource_tfe_workspace")
-	log.Println("[ERROR] OMAR")
-	hclog.Default().Info("[INFO] OMAR hello world")
-	hclog.Default().Info("[ERROR] OMAR hello world")
-	hclog.Default().Info("[DEBUG] OMAR hello world")
 	return &schema.Provider{
 		Schema: map[string]*schema.Schema{
 			"hostname": {
@@ -126,7 +117,6 @@ func providerConfigure(d *schema.ResourceData) (interface{}, error) {
 }
 
 func getClient(tfeHost, token string, insecure bool) (*tfe.Client, error) {
-	log.Printf("OMAR HERE")
 	// Parse the hostname for comparison,
 	hostname, err := svchost.ForComparison(tfeHost)
 	if err != nil {

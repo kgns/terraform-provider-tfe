@@ -6,7 +6,6 @@ import (
 	"log"
 	"regexp"
 
-	hclog "github.com/hashicorp/go-hclog"
 	tfe "github.com/hashicorp/go-tfe"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/validation"
@@ -15,11 +14,6 @@ import (
 var workspaceIdRegexp = regexp.MustCompile("^ws-[a-zA-Z0-9]{16}$")
 
 func resourceTFEWorkspace() *schema.Resource {
-	log.Println("[DEBUG] OMAR")
-	log.Println("[Info] OMAR")
-	log.Println("OMAR in resource_tfe_workspace")
-	hclog.Default().Info("[INFO] OMAR hello world")
-	hclog.Default().Info("[DEBUG] OMAR hello world")
 	return &schema.Resource{
 		Create: resourceTFEWorkspaceCreate,
 		Read:   resourceTFEWorkspaceRead,
@@ -335,11 +329,15 @@ func resourceTFEWorkspaceRead(d *schema.ResourceData, meta interface{}) error {
 	d.Set("vcs_repo", vcsRepo)
 
 	var remoteStateConsumerIDs []interface{}
-	if workspace.GlobalRemoteState {
-		fmt.Println("HAS GLOBAL REMOTE ENABLED")
-		//for _, remoteStateConsumer := range workspace.RemoteStateConsumers {
-		//	remoteStateConsumerIDs = append(remoteStateConsumerIDs, remoteStateConsumer.ID)
-		//}
+	if !workspace.GlobalRemoteState {
+		workspaceList, err := tfeClient.Workspaces.ReadRemoteStateConsumers(ctx, id)
+		if err != nil {
+			return fmt.Errorf(
+				"Error reading remote state consumers workspace %s: %v", id, err)
+		}
+		for _, remoteStateConsumer := range workspaceList.Items {
+			remoteStateConsumerIDs = append(remoteStateConsumerIDs, remoteStateConsumer.ID)
+		}
 	}
 	d.Set("remote_state_consumer_ids", remoteStateConsumerIDs)
 
@@ -349,7 +347,6 @@ func resourceTFEWorkspaceRead(d *schema.ResourceData, meta interface{}) error {
 func resourceTFEWorkspaceUpdate(d *schema.ResourceData, meta interface{}) error {
 	tfeClient := meta.(*tfe.Client)
 	id := d.Id()
-	// globalRemoteState := d.Get("global_remote_state").(bool)
 
 	if d.HasChange("name") || d.HasChange("auto_apply") || d.HasChange("queue_all_runs") ||
 		d.HasChange("terraform_version") || d.HasChange("working_directory") || d.HasChange("vcs_repo") ||
@@ -460,8 +457,8 @@ func resourceTFEWorkspaceUpdate(d *schema.ResourceData, meta interface{}) error 
 		}
 	}
 
-	// TODO if not global state
-	if d.HasChange("remote_state_consumer_ids") {
+	globalRemoteState := d.Get("global_remote_state").(bool)
+	if !globalRemoteState && d.HasChange("remote_state_consumer_ids") {
 		oldWorkspaceIDValues, newWorkspaceIDValues := d.GetChange("remote_state_consumer_ids")
 		newWorkspaceIDsSet := newWorkspaceIDValues.(*schema.Set)
 		oldWorkspaceIDsSet := oldWorkspaceIDValues.(*schema.Set)

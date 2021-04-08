@@ -653,6 +653,38 @@ func TestAccTFEWorkspace_operationsAndExecutionModeInteroperability(t *testing.T
 	})
 }
 
+func TestAccTFEWorkspace_remoteState(t *testing.T) {
+	workspace := &tfe.Workspace{}
+	workspaceRemote := &tfe.Workspace{}
+	rInt := rand.New(rand.NewSource(time.Now().UnixNano())).Int()
+
+	resource.Test(t, resource.TestCase{
+		PreCheck:     func() { testAccPreCheck(t) },
+		Providers:    testAccProviders,
+		CheckDestroy: testAccCheckTFEWorkspaceDestroy,
+		Steps: []resource.TestStep{
+			{
+				Config: testAccTFEWorkspace_remoteState(rInt),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckTFEWorkspaceExists(
+						"tfe_workspace.foobar", workspace),
+					testAccCheckTFEWorkspaceExists(
+						"tfe_workspace.foobar_remote", workspaceRemote),
+					testAccCheckTFEWorkspaceAttributes(workspace),
+					resource.TestCheckResourceAttr(
+						"tfe_workspace.foobar", "name", "workspace-test"),
+					resource.TestCheckResourceAttr(
+						"tfe_workspace.foobar-remote", "name", "workspace-test-2"),
+					resource.TestCheckResourceAttr(
+						"tfe_workspace.foobar", "global_remote_state", "true"),
+					resource.TestCheckResourceAttr(
+						"tfe_workspace.foobar", "remote_state_consumer_ids", workspaceRemote.ID),
+				),
+			},
+		},
+	})
+}
+
 func testAccCheckTFEWorkspaceExists(
 	n string, workspace *tfe.Workspace) resource.TestCheckFunc {
 	return func(s *terraform.State) error {
@@ -1317,4 +1349,26 @@ resource "tfe_workspace" "foobar" {
   auto_apply   = true
 }
 `, rInt)
+}
+
+func testAccTFEWorkspace_remoteState(rInt int) string {
+	return fmt.Sprintf(`
+resource "tfe_organization" "foobar" {
+  name  = "tst-terraform-%d"
+  email = "admin@company.com"
+}
+resource "tfe_workspace" "foobar_remote" {
+  name               = "workspace-test-2"
+  organization       = tfe_organization.foobar.id
+	global_remote_state = false
+}
+
+resource "tfe_workspace" "foobar" {
+  name               = "workspace-test"
+  organization       = tfe_organization.foobar.id
+  allow_destroy_plan = false
+  auto_apply         = true
+	global_remote_state = false
+  remote_state_consumer_ids = [tfe_workspace.foobar_remote.id]
+}`, rInt)
 }
