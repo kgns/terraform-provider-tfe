@@ -674,9 +674,11 @@ func TestAccTFEWorkspace_remoteState(t *testing.T) {
 					resource.TestCheckResourceAttr(
 						"tfe_workspace.foobar", "name", "workspace-test"),
 					resource.TestCheckResourceAttr(
-						"tfe_workspace.foobar-remote", "name", "workspace-test-2"),
+						"tfe_workspace.foobar_remote", "name", "workspace-test-2"),
 					resource.TestCheckResourceAttr(
-						"tfe_workspace.foobar", "global_remote_state", "true"),
+						"tfe_workspace.foobar", "global_remote_state", "false"),
+					resource.TestCheckResourceAttr(
+						"tfe_workspace.foobar_remote", "global_remote_state", "false"),
 					resource.TestCheckResourceAttr(
 						"tfe_workspace.foobar", "remote_state_consumer_ids", workspaceRemote.ID),
 				),
@@ -1368,7 +1370,7 @@ resource "tfe_workspace" "foobar" {
   organization       = tfe_organization.foobar.id
   allow_destroy_plan = false
   auto_apply         = true
-  global_remote_state = false
+	global_remote_state = false
   remote_state_consumer_ids = [tfe_workspace.foobar_remote.id]
 }`, rInt)
 }
