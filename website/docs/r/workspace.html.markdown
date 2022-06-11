@@ -130,6 +130,10 @@ In addition to all arguments above, the following attributes are exported:
 
 * `id` - The workspace ID.
 
+The `vcs_repo` block attributes:
+
+* `webhook_url` - Webhook URL created for the configured VCS connection.
+
 ## Import
 
 Workspaces can be imported; use `<WORKSPACE ID>` or `<ORGANIZATION NAME>/<WORKSPACE NAME>` as the

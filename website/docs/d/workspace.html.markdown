@@ -65,3 +65,4 @@ The `vcs_repo` block contains:
 * `ingress_submodules` - Indicates whether submodules should be fetched when
   cloning the VCS repository.
 * `oauth_token_id` - OAuth token ID of the configured VCS connection.
+* `webhook_url` - Webhook URL created for the configured VCS connection.
