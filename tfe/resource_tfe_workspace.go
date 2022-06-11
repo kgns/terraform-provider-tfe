@@ -200,6 +200,12 @@ func resourceTFEWorkspace() *schema.Resource {
 							Type:     schema.TypeString,
 							Required: true,
 						},
+
+						"webhook_url": {
+							Type:     schema.TypeString,
+							Optional: true,
+							Computed: true,
+						},
 					},
 				},
 			},
@@ -370,6 +376,7 @@ func resourceTFEWorkspaceRead(d *schema.ResourceData, meta interface{}) error {
 			"branch":             workspace.VCSRepo.Branch,
 			"ingress_submodules": workspace.VCSRepo.IngressSubmodules,
 			"oauth_token_id":     workspace.VCSRepo.OAuthTokenID,
+			"webhook_url":        workspace.VCSRepo.WebhookURL,
 		}
 		vcsRepo = append(vcsRepo, vcsConfig)
 	}
